@@ -7,8 +7,6 @@
 # next
 # list
 
-require 'csv'
-
 def read_file
   CSV.parse(File.read('todos.csv'), headers: false)
 end
@@ -20,24 +18,47 @@ def write_to_file(items)
     end
   end
 end
-
 def append_to_file(item)
   CSV.open('todos.csv', 'a') do |csv|
     csv << [item, "false"]
   end
 end
 
+require 'csv'
+def add(attrs)
+  append_to_file(attrs[1].to_s)
+end
+
+def reorder(attrs)
+  items = read_file
+  id_first = attrs[1].to_i-1
+  id_second = attrs[2].to_i-1
+  items[id_first], items[id_second] = items[id_second], items[id_first]
+  return items
+end
+
+def reopen (attrs)
+    id = attrs[1]
+    items = read_file
+    if id
+      items[id.to_i - 1][1] = "false"
+    end
+    return items
+end
+
 def length_of_frame
   items = read_file
   items_temp = []
-  items.each do |item|
+  items.each do |item, value|
     items_temp.push item.to_s
   end
-  
-  items_temp = items_temp.sort_by {|x| x.length}
-  hr = "--------" 
-  items_temp.last.length.times do 
-    hr += '-'
+  if items.size > 0
+    items_temp = items_temp.sort_by {|x| x.length}
+    hr = "--------"   
+    p items_temp
+    items_temp.last.length.times do 
+      hr += '-'
+    end
   end
   return hr
 end
@@ -56,49 +77,52 @@ def list_items
   puts hr
 end
 
+def finish (attrs)
+  id = attrs[1]
+  items = read_file
+  if id
+    items[id.to_i - 1][1] = "true"
+  end
+  return items
+end
+
+def next_open
+  items = read_file
+  items.each do |row|
+    if row[1] == "false"
+      puts "[] #{row[0]}"
+      break
+    end
+  end
+end
+
+def remove_item
+  id = ARGV[1].to_i - 1
+  items = read_file
+  items.delete_at(id)
+  write_to_file(items)
+  list_items
+end
+
 commandName = ARGV[0]
+
 case commandName
   when "add"
-    todoName = ARGV[1].to_s
-    append_to_file(todoName)
+    add(ARGV)
     list_items
   when "list"
     list_items
   when "finish"
-    id = ARGV[1]
-    items = read_file
-    if id
-      items[id.to_i - 1][1] = "true"
-    end
-    write_to_file(items)
+    write_to_file(finish(ARGV))
     list_items
-  when "reopen"
-    id = ARGV[1]
-    items = read_file
-    if id
-      items[id.to_i - 1][1] = "false"
-    end
-    write_to_file(items)
+   when "reopen"
+    write_to_file(reopen (ARGV) )
     list_items
   when "next"
-    items = read_file
-    items.each do |row|
-      if row[1] == "false"
-        puts "[] #{row[0]}"
-        break
-      end
-    end
+    next_open 
   when "reorder"
-    items = read_file
-    id_first = ARGV[1].to_i - 1
-    id_second = ARGV[2].to_i - 1
-    items[id_first], items[id_second] = items[id_second], items[id_first]
-    write_to_file(items)
+    write_to_file(reorder(ARGV))
     list_items
   when "remove"
-    id = ARGV[1].to_i - 1
-    items = read_file
-    items.delete_at(id)
-    write_to_file(items)
-    list_items
+    remove_item
 end
