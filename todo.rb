@@ -6,6 +6,7 @@
 # reorder id id
 # next
 # list
+require 'csv'
 
 def read_file
   CSV.parse(File.read('todos.csv'), headers: false)
@@ -24,7 +25,6 @@ def append_to_file(item)
   end
 end
 
-require 'csv'
 def add(attrs)
   append_to_file(attrs[1].to_s)
 end
