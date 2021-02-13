@@ -6,123 +6,120 @@
 # reorder id id
 # next
 # list
+
 require 'csv'
+class File
+  def read_file
+    CSV.parse(File.read(file), headers: false)
+  end
+  def file_name
+    p file
+  end 
+  def append_to_file(item)
+    CSV.open(file, 'a') do |csv|
+    csv << [item, "false"]
+    end
+  end
+  def add(attrs)
+    append_to_file(attrs)
+  end
 
-def read_file
-  CSV.parse(File.read('todos.csv'), headers: false)
-end
-
-def write_to_file(items)
-  CSV.open('todos.csv', 'w') do |csv|
+  def write_to_file(items)
+    CSV.open(file, 'w') do |csv|
     items.each do |item|
       csv << [item[0], item[1]]
     end
+    end
   end
 end
-def append_to_file(item)
-  CSV.open('todos.csv', 'a') do |csv|
-    csv << [item, "false"]
+class Todo < File
+  attr_accessor :file
+  def initialize(name)
+    @file = name
   end
-end
 
-def add(attrs)
-  append_to_file(attrs[1].to_s)
-end
-
-def reorder(attrs)
-  items = read_file
-  id_first = attrs[1].to_i-1
-  id_second = attrs[2].to_i-1
-  items[id_first], items[id_second] = items[id_second], items[id_first]
-  return items
-end
-
-def reopen (attrs)
-    id = attrs[1]
+  def finish(id)
+    items = read_file
+    if id
+      items[id.to_i - 1][1] = "true"
+    end
+    write_to_file(items)
+  end
+  def next_todo
+    items = read_file
+    items.each do |row|
+      if row[1] == "false"
+      p "[] #{row[0]}"
+      break
+      end
+    end
+  end
+  def reorder(id1, id2)
+    items = read_file
+    items[id1], items[id2] = items[id2], items[id1]
+    write_to_file(items)
+  end
+  def reopen(id)
     items = read_file
     if id
       items[id.to_i - 1][1] = "false"
     end
-    return items
-end
-
-def length_of_frame
-  items = read_file
-  items_temp = []
-  items.each do |item, value|
-    items_temp.push item.to_s
+    write_to_file(items)
   end
-  if items.size > 0
-    items_temp = items_temp.sort_by {|x| x.length}
-    hr = "--------"   
-    p items_temp
-    items_temp.last.length.times do 
-      hr += '-'
-    end
+  def remove(id)
+    items = read_file
+    items.delete_at(id)
+    write_to_file(items)
   end
-  return hr
-end
-
-def list_items
-  items = read_file
-  hr = length_of_frame
-  puts hr
-  items.each_with_index do |row, index|
+  def list_items
+    items = self.read_file
+    hr = length_of_frame
+    p hr
+    items.each_with_index do |row, index|
     if row[1] == "true"
-      puts "#{index + 1}) [x] #{row[0]}"
+      p "#{(index + 1).to_s}) [x] #{row[0].to_s}"
     else
-      puts "#{index + 1}) [] #{row[0]}"
+      p "#{(index + 1).to_s}) [] #{row[0].to_s}"
     end
-  end
-  puts hr
-end
-
-def finish (attrs)
-  id = attrs[1]
-  items = read_file
-  if id
-    items[id.to_i - 1][1] = "true"
-  end
-  return items
-end
-
-def next_open
-  items = read_file
-  items.each do |row|
-    if row[1] == "false"
-      puts "[] #{row[0]}"
-      break
     end
+    p hr
+  end
+  def length_of_frame
+    items = read_file
+    items_temp = []
+    items.each do |item, status|
+    items_temp<<item.to_s
+    end
+    items_temp = items_temp.sort_by {|x| x.length}
+    hr = "--------" 
+    items_temp.last.length.times do 
+    hr += '-'
+    end
+    return hr
   end
 end
 
-def remove_item
-  id = ARGV[1].to_i - 1
-  items = read_file
-  items.delete_at(id)
-  write_to_file(items)
-  list_items
-end
+todo = Todo.new('todos.csv')
 
 commandName = ARGV[0]
-
 case commandName
   when "add"
-    add(ARGV)
-    list_items
+    todo.add(ARGV[1].to_s)
+    todo.list_items
   when "list"
-    list_items
+    todo.list_items
   when "finish"
-    write_to_file(finish(ARGV))
-    list_items
-   when "reopen"
-    write_to_file(reopen (ARGV) )
-    list_items
+    todo.finish(ARGV[1])
+    todo.list_items
+  when "reopen"
+    todo.reopen(ARGV[1])
+    todo.list_items
   when "next"
-    next_open 
+  todo.next_todo
   when "reorder"
-    write_to_file(reorder(ARGV))
-    list_items
+    todo.reorder(ARGV[1].to_i - 1,ARGV[2].to_i - 1)
+    todo.list_items
   when "remove"
-    remove_item
+    todo.remove(ARGV[1].to_i - 1)
+    todo.list_items
 end
